@@ -46,15 +46,15 @@ module.exports = class DriveBundle {
       const r = {}
       let save = false
 
-      sources[data.key] = data.source
+      sources[this.mount + data.key] = data.source
 
       for (const { input, output } of data.resolutions) {
         if (!input || !output) continue
-        r[input] = output
+        r[input] = this.mount + output
         save = true
       }
 
-      if (save) resolutions[data.key] = r
+      if (save) resolutions[this.mount + data.key] = r
 
       if (this.prebuilds) {
         for (const { input, output } of data.addons) {
