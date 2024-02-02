@@ -1,0 +1,40 @@
+{
+  "name": "drive-bundler",
+  "version": "0.0.0",
+  "description": "Extract bundles from drives",
+  "main": "index.js",
+  "imports": {
+    "fs": {
+      "bare": "bare-fs",
+      "default": "fs"
+    },
+    "fs/*": {
+      "bare": "bare-fs/*",
+      "default": "fs/*"
+    },
+    "path": {
+      "bare": "bare-path",
+      "default": "path"
+    }
+  },
+  "scripts": {
+    "test": "standard"
+  },
+  "dependencies": {
+    "dependency-stream": "^2.0.0",
+    "sodium-native": "^4.0.6"
+  },
+  "devDependencies": {
+    "standard": "^17.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/holepunchto/drive-bundler.git"
+  },
+  "author": "Holepunch Inc.",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/holepunchto/drive-bundler/issues"
+  },
+  "homepage": "https://github.com/holepunchto/drive-bundler"
+}
