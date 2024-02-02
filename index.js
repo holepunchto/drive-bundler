@@ -25,6 +25,11 @@ module.exports = class DriveBundle {
     this.entrypoint = entrypoint
   }
 
+  static async bundle (drive, opts) {
+    const d = new this(drive, opts)
+    return await d.bundle()
+  }
+
   async bundle (entrypoint = this.entrypoint) {
     let main = null
 
