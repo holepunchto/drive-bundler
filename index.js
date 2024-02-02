@@ -7,7 +7,7 @@ module.exports = class DriveBundle {
   constructor (drive, {
     cwd = path.resolve('.'),
     mount = '/',
-    cache = require.cache || null,
+    cache = null,
     host = require.addon ? require.addon.host : process.platform + '-' + process.arch,
     portable = false,
     prebuilds = true,
@@ -87,7 +87,7 @@ module.exports = class DriveBundle {
     const name = m[1] + '@' + hash(buf) + m[3]
     const dir = path.join(this.cwd, 'prebuilds', this.host)
     const out = path.join(dir, name)
-    const res = this.absolutePrebuilds ? '/../prebuilds/' + (this.portable ? '{host}' : this.host) + '/' + name : out
+    const res = this.absolutePrebuilds ? out : '/../prebuilds/' + (this.portable ? '{host}' : this.host) + '/' + name
 
     try {
       await fs.promises.stat(out)
