@@ -66,7 +66,7 @@ module.exports = class DriveBundle {
 
     for (const addon of await Promise.all(addonsPending)) {
       if (!addon) continue
-      const r = resolutions[addon.input] = resolutions[addon.input] || {}
+      const r = resolutions[this.mount + addon.input] = resolutions[this.mount + addon.input] || {}
       r['bare:addon'] = addon.output
     }
 
@@ -87,7 +87,7 @@ module.exports = class DriveBundle {
     const name = m[1] + '@' + hash(buf) + m[3]
     const dir = path.join(this.cwd, 'prebuilds', this.host)
     const out = path.join(dir, name)
-    const res = this.absolutePrebuilds ? out : '/../prebuilds/' + (this.portable ? '{host}' : this.host) + '/' + name
+    const res = this.absolutePrebuilds ? new URL(out, 'file:///').href : '/../prebuilds/' + (this.portable ? '{host}' : this.host) + '/' + name
 
     try {
       await fs.promises.stat(out)
