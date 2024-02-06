@@ -21,10 +21,14 @@
     "test": "standard"
   },
   "dependencies": {
+    "brittle": "^3.3.2",
     "dependency-stream": "^2.0.0",
     "sodium-native": "^4.0.6"
   },
   "devDependencies": {
+    "bare-bundle": "^1.0.0",
+    "localdrive": "^1.11.3",
+    "node-bare-bundle": "^1.2.1",
     "standard": "^17.1.0"
   },
   "repository": {
