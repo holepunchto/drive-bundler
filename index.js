@@ -14,9 +14,11 @@ module.exports = class DriveBundle {
     portable = false,
     prebuilds = true,
     absolutePrebuilds = !!mount,
+    packages = true,
     entrypoint = '.'
   } = {}) {
     this.drive = drive
+    this.packages = packages
     this.cwd = cwd
     this.prebuilds = prebuilds
     this.cache = cache
@@ -32,12 +34,103 @@ module.exports = class DriveBundle {
     return await d.bundle()
   }
 
+  static async stringify (drive, opts) {
+    const d = new this(drive, opts)
+    return await d.stringify()
+  }
+
+  async stringify (entrypoint = this.entrypoint) {
+    const b = await this.bundle(entrypoint)
+    const addons = {}
+    let wrap = ''
+
+    for (const [key, source] of Object.entries(b.sources)) {
+      if (wrap) wrap += ',\n'
+      wrap += JSON.stringify(key) + ': { resolutions: ' + JSON.stringify(b.resolutions[key] || {}) + ', '
+      wrap += 'source (module, exports, __filename, __dirname, require) {'
+      wrap += (key.endsWith('.json') ? 'module.exports = ' : '') + source
+      wrap += '\n}}'
+    }
+
+    for (const [key, map] of Object.entries(b.resolutions)) {
+      if (map['bare:addon']) addons[key] = map['bare:addon']
+    }
+
+    return `{
+      const __bundle__ = {
+        builtinRequire: typeof require === 'function' ? require : null,
+        cache: Object.create(null),
+        addons: ${JSON.stringify(addons)},
+        bundle: {${wrap}},
+        require (filename) {
+          let mod = __bundle__.cache[filename]
+          if (mod) return mod
+
+          const b = __bundle__.bundle[filename]
+          if (!b) throw new Error('Module not found')
+
+          mod = __bundle__.cache[filename] = {
+            filename,
+            dirname: filename.slice(0, filename.lastIndexOf('/')),
+            exports: {},
+            require
+          }
+
+          require.resolve = function (req) {
+            const res = b.resolutions[req]
+            if (!res) throw new Error('Could not find module "' + req + '" from "' + mod.filename + '"')
+            return res
+          }
+
+          require.addon = function (dir = '.') {
+            if (!__bundle__.builtinRequire || !__bundle__.builtinRequire.addon) throw new Error('Addons not supported')
+
+            let d = dir.startsWith('/') ? dir : mod.dirname + '/' + dir
+            let p = 1
+            let addon = ''
+
+            while (p < d.length) {
+              let n = d.indexOf('/', p)
+              if (n === -1) n = d.length
+
+              const part = d.slice(p, n)
+
+              p = n + 1
+
+              if (part === '.' || part === '') continue
+              if (part === '..') {
+                addon = addon.slice(0, addon.lastIndexOf('/'))
+                continue
+              }
+
+              addon += '/' + part
+            }
+
+            if (!addon.endsWith('/')) addon += '/'
+
+            const mapped = __bundle__.addons[addon]
+            return mapped ? __bundle__.builtinRequire(mapped) : __bundle__.builtinRequire.addon(addon)
+          }
+
+          b.source(mod, mod.exports, mod.filename, mod.dirname, require)
+          return mod
+
+          function require (req) {
+            return __bundle__.require(require.resolve(req)).exports
+          }
+        }
+      }
+
+      __bundle__.require(${JSON.stringify(b.entrypoint)})
+    }`.replace(/\n[ ]{4}/g, '\n').trim() + '\n'
+  }
+
   async bundle (entrypoint = this.entrypoint) {
     let main = null
 
     const resolutions = {}
     const sources = {}
-    const stream = new Deps(this.drive, { packages: true, source: true, portable: this.portable, entrypoint })
+    const stream = new Deps(this.drive, { packages: this.packages, source: true, portable: this.portable, entrypoint })
 
     const addonsPending = []
 
