@@ -2,6 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const b4a = require('b4a')
 const Deps = require('dependency-stream')
+const mutex = require('mutexify/promise')
 const sodium = require('sodium-native')
 const { pathToFileURL } = require('url-file-url')
 
@@ -27,6 +28,7 @@ module.exports = class DriveBundle {
     this.host = host
     this.portable = portable
     this.entrypoint = entrypoint
+    this.lock = mutex()
   }
 
   static async bundle (drive, opts) {
@@ -187,11 +189,11 @@ module.exports = class DriveBundle {
     const buf = await this.drive.get(key)
     if (!buf) return null
 
-    const name = m[1] + '@' + hash(buf) + m[3]
+    const name = hash(buf) + m[3]
     const dir = path.join(this.cwd, 'prebuilds', this.host)
     const out = path.join(dir, name)
 
-    await writeAtomic(dir, out, buf)
+    await writeAtomic(dir, out, buf, this.lock)
 
     return this.absolutePrebuilds ? pathToFileURL(out).href : '/../prebuilds/' + (this.portable ? '{host}' : this.host) + '/' + name
   }
@@ -208,13 +210,23 @@ function hash (buf) {
   return b4a.toString(out, 'hex')
 }
 
-async function writeAtomic (dir, out, buf) {
+async function writeAtomic (dir, out, buf, lock) {
   try {
     await fs.promises.stat(out)
     return
   } catch {}
 
-  const tmp = out + '.' + Date.now() + '.' + Math.random().toString(16).slice(2) + '.tmp'
+  const release = await lock()
+
+  try {
+    await writeToTmpAndSwap(dir, out, buf)
+  } finally {
+    release()
+  }
+}
+
+async function writeToTmpAndSwap (dir, out, buf) {
+  const tmp = out + '.tmp'
 
   await fs.promises.mkdir(dir, { recursive: true })
   await fs.promises.writeFile(tmp, buf)
