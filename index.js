@@ -182,10 +182,10 @@ module.exports = class DriveBundle {
 
   async extractPrebuild (key) {
     const m = key.match(/\/([^/@]+)(@[^/]+)?(\.node|\.bare)$/)
-    if (!m) throw new Error('Key does not match /{name}.(bare|node)')
+    if (!m) return null
 
     const buf = await this.drive.get(key)
-    if (!buf) throw new Error('Prebuild not found')
+    if (!buf) return null
 
     const name = m[1] + '@' + hash(buf) + m[3]
     const dir = path.join(this.cwd, 'prebuilds', this.host)
@@ -197,11 +197,8 @@ module.exports = class DriveBundle {
   }
 
   async _mapPrebuild (input, output) {
-    try {
-      return { input, output: await this.extractPrebuild(output) }
-    } catch {
-      return null
-    }
+    const prebuild = await this.extractPrebuild(output)
+    return { input, output: prebuild }
   }
 }
 
