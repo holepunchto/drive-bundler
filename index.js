@@ -21,7 +21,7 @@ module.exports = class DriveBundle {
     this.drive = drive
     this.packages = packages
     this.cwd = cwd
-    this.prebuilds = prebuilds
+    this.prebuilds = prebuilds ? path.resolve(cwd, typeof prebuilds === 'string' ? prebuilds : 'prebuilds') : null
     this.cache = cache
     this.mount = typeof mount === 'string' ? mount : mount.href.replace(/[/]$/, '')
     this.absolutePrebuilds = absolutePrebuilds
@@ -190,7 +190,7 @@ module.exports = class DriveBundle {
     if (!buf) return null
 
     const name = hash(buf) + m[3]
-    const dir = path.join(this.cwd, 'prebuilds', this.host)
+    const dir = path.join(this.prebuilds, this.host)
     const out = path.join(dir, name)
 
     await writeAtomic(dir, out, buf, this.lock)
