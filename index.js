@@ -132,7 +132,7 @@ module.exports = class DriveBundle {
 
     const resolutions = {}
     const sources = {}
-    const stream = new Deps(this.drive, { packages: this.packages, source: true, portable: this.portable, entrypoint })
+    const stream = new Deps(this.drive, { host: this.host, packages: this.packages, source: true, portable: this.portable, entrypoint })
 
     const addonsPending = []
 
