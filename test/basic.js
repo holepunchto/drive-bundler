@@ -44,3 +44,23 @@ test('basic mounted', async function (t) {
 
   t.is(yes, true)
 })
+
+test('assets', async function (t) {
+  const drive = new Localdrive(path.join(__dirname, '..'))
+  const b = new Bundler(drive, { cwd: __dirname, entrypoint: '/test/fixtures/assets.js' })
+
+  const d = await b.bundle()
+
+  const bundle = new Bundle()
+
+  for (const [key, source] of Object.entries(d.sources)) {
+    bundle.write(key, source)
+  }
+
+  bundle.resolutions = d.resolutions
+  bundle.main = d.entrypoint
+
+  const asset = nodeBundle(bundle.toBuffer(), { mount: path.join(__dirname, 'test.bundle') })
+
+  t.is(asset, path.join(__dirname, 'assets/test/fixtures/sodium.js'))
+})

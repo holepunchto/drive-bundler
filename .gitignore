@@ -4,3 +4,4 @@ sandbox
 coverage
 package-lock.json
 test/prebuilds
+test/assets

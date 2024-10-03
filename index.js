@@ -4,6 +4,8 @@ const b4a = require('b4a')
 const Deps = require('dependency-stream')
 const mutex = require('mutexify/promise')
 const sodium = require('sodium-native')
+const unixResolve = require('unix-path-resolve')
+const { pipelinePromise } = require('streamx')
 const { pathToFileURL } = require('url-file-url')
 
 module.exports = class DriveBundle {
@@ -12,9 +14,9 @@ module.exports = class DriveBundle {
     mount = '',
     cache = null,
     host = require.addon ? require.addon.host : process.platform + '-' + process.arch,
-    portable = false,
     prebuilds = true,
-    absolutePrebuilds = !!mount,
+    assets = true,
+    absoluteFiles = !!mount,
     packages = true,
     entrypoint = '.'
   } = {}) {
@@ -22,11 +24,11 @@ module.exports = class DriveBundle {
     this.packages = packages
     this.cwd = cwd
     this.prebuilds = prebuilds ? path.resolve(cwd, typeof prebuilds === 'string' ? prebuilds : 'prebuilds') : null
+    this.assets = assets ? path.resolve(cwd, typeof assets === 'string' ? assets : 'assets') : null
     this.cache = cache
     this.mount = typeof mount === 'string' ? mount : mount.href.replace(/[/]$/, '')
-    this.absolutePrebuilds = absolutePrebuilds
+    this.absoluteFiles = absoluteFiles
     this.host = host
-    this.portable = portable
     this.entrypoint = entrypoint
     this.lock = mutex()
   }
@@ -36,105 +38,16 @@ module.exports = class DriveBundle {
     return await d.bundle()
   }
 
-  static async stringify (drive, opts) {
-    const d = new this(drive, opts)
-    return await d.stringify()
-  }
-
-  async stringify (entrypoint = this.entrypoint) {
-    const b = await this.bundle(entrypoint)
-    const addons = {}
-    let wrap = ''
-
-    for (const [key, source] of Object.entries(b.sources)) {
-      if (wrap) wrap += ',\n'
-      wrap += JSON.stringify(key) + ': { resolutions: ' + JSON.stringify(b.resolutions[key] || {}) + ', '
-      wrap += 'source (module, exports, __filename, __dirname, require) {'
-      wrap += (key.endsWith('.json') ? 'module.exports = ' : '') + source
-      wrap += '\n}}'
-    }
-
-    for (const [key, map] of Object.entries(b.resolutions)) {
-      if (map['bare:addon']) addons[key] = map['bare:addon']
-    }
-
-    return `{
-      const __bundle__ = {
-        builtinRequire: typeof require === 'function' ? require : null,
-        cache: Object.create(null),
-        addons: ${JSON.stringify(addons)},
-        bundle: {${wrap}},
-        require (filename) {
-          let mod = __bundle__.cache[filename]
-          if (mod) return mod
-
-          const b = __bundle__.bundle[filename]
-          if (!b) throw new Error('Module not found')
-
-          mod = __bundle__.cache[filename] = {
-            filename,
-            dirname: filename.slice(0, filename.lastIndexOf('/')),
-            exports: {},
-            require
-          }
-
-          require.resolve = function (req) {
-            const res = b.resolutions[req]
-            if (!res) throw new Error('Could not find module "' + req + '" from "' + mod.filename + '"')
-            return res
-          }
-
-          require.addon = function (dir = '.') {
-            if (!__bundle__.builtinRequire || !__bundle__.builtinRequire.addon) throw new Error('Addons not supported')
-
-            let d = dir.startsWith('/') ? dir : mod.dirname + '/' + dir
-            let p = 1
-            let addon = ''
-
-            while (p < d.length) {
-              let n = d.indexOf('/', p)
-              if (n === -1) n = d.length
-
-              const part = d.slice(p, n)
-
-              p = n + 1
-
-              if (part === '.' || part === '') continue
-              if (part === '..') {
-                addon = addon.slice(0, addon.lastIndexOf('/'))
-                continue
-              }
-
-              addon += '/' + part
-            }
-
-            if (!addon.endsWith('/')) addon += '/'
-
-            const mapped = __bundle__.addons[addon]
-            return mapped ? __bundle__.builtinRequire(mapped) : __bundle__.builtinRequire.addon(addon)
-          }
-
-          b.source(mod, mod.exports, mod.filename, mod.dirname, require)
-          return mod
-
-          function require (req) {
-            return __bundle__.require(require.resolve(req)).exports
-          }
-        }
-      }
-
-      __bundle__.require(${JSON.stringify(b.entrypoint)})
-    }`.replace(/\n[ ]{4}/g, '\n').trim() + '\n'
-  }
-
   async bundle (entrypoint = this.entrypoint) {
     let main = null
 
     const resolutions = {}
+    const imports = {}
     const sources = {}
-    const stream = new Deps(this.drive, { host: this.host, packages: this.packages, source: true, portable: this.portable, entrypoint })
+    const stream = new Deps(this.drive, { host: this.host, packages: this.packages, source: true, entrypoint })
 
     const addonsPending = []
+    const assetsPending = []
 
     for await (const data of stream) {
       const u = this._resolutionKey(data.key, false)
@@ -161,18 +74,36 @@ module.exports = class DriveBundle {
           addonsPending.push(this._mapPrebuild(input, output))
         }
       }
+
+      if (this.assets) {
+        for (const { input, output } of data.assets) {
+          assetsPending.push(this._mapAsset(data.key, input, output))
+        }
+      }
     }
 
     for (const addon of await Promise.all(addonsPending)) {
       if (!addon) continue
+
       const dir = this._resolutionKey(addon.input, true)
       const r = resolutions[dir] = resolutions[dir] || {}
       r['bare:addon'] = addon.output
     }
 
+    for (const asset of await Promise.all(assetsPending)) {
+      if (!asset) continue
+
+      const r = resolutions[asset.referrer] = resolutions[asset.referrer] || {}
+
+      const def = r[asset.input]
+      r[asset.input] = { asset: asset.output }
+      if (def) r[asset.input].default = def
+    }
+
     return {
       entrypoint: main,
       resolutions,
+      imports,
       sources
     }
   }
@@ -180,6 +111,26 @@ module.exports = class DriveBundle {
   _resolutionKey (key, dir) {
     const trail = dir && !key.endsWith('/') ? '/' : ''
     return this.mount ? this.mount + encodeURI(key) + trail : key + trail
+  }
+
+  async extractAsset (key) {
+    const out = path.join(this.assets, key)
+
+    try {
+      const entry = await this.drive.entry(key)
+      if (entry === null) return null
+
+      await fs.promises.mkdir(path.dirname(out), { recursive: true })
+
+      const driveStream = this.drive.createReadStream(entry)
+      const fsStream = fs.createWriteStream(out)
+
+      await pipelinePromise(driveStream, fsStream)
+
+      return this.absoluteFiles ? pathToFileURL(out).href : '/../assets' + key
+    } catch {
+      return null
+    }
   }
 
   async extractPrebuild (key) {
@@ -195,7 +146,14 @@ module.exports = class DriveBundle {
 
     await writeAtomic(dir, out, buf, this.lock)
 
-    return this.absolutePrebuilds ? pathToFileURL(out).href : '/../prebuilds/' + (this.portable ? '{host}' : this.host) + '/' + name
+    return this.absoluteFiles ? pathToFileURL(out).href : '/../prebuilds/' + this.host + '/' + name
+  }
+
+  async _mapAsset (referrer, input, output) {
+    const dir = unixResolve(referrer, '..')
+    const key = unixResolve(dir, input)
+    const asset = await this.extractAsset(key)
+    return { referrer, input, output: asset }
   }
 
   async _mapPrebuild (input, output) {
