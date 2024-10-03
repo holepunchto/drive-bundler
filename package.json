@@ -28,6 +28,7 @@
     "dependency-stream": "^2.0.0",
     "mutexify": "^1.4.0",
     "sodium-native": "^4.0.0",
+    "unix-path-resolve": "^1.0.2",
     "url-file-url": "^1.0.1"
   },
   "devDependencies": {

@@ -62,5 +62,5 @@ test('assets', async function (t) {
 
   const asset = nodeBundle(bundle.toBuffer(), { mount: path.join(__dirname, 'test.bundle') })
 
-  t.is(asset, path.join(__dirname, 'assets/test/fixtures/sodium.js'))
+  t.is(asset, path.join(__dirname, 'fixtures/sodium.js'))
 })

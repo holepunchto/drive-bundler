@@ -114,6 +114,10 @@ module.exports = class DriveBundle {
   }
 
   async extractAsset (key) {
+    if (hasToPath(this.drive)) {
+      return pathToFileURL(this.drive.toPath(key)).href
+    }
+
     const out = path.join(this.assets, key)
 
     try {
@@ -121,13 +125,14 @@ module.exports = class DriveBundle {
       if (entry === null) return null
 
       await fs.promises.mkdir(path.dirname(out), { recursive: true })
+      const mode = entry.value.executable ? 0o744 : 0o644
 
       const driveStream = this.drive.createReadStream(entry)
-      const fsStream = fs.createWriteStream(out)
+      const fsStream = fs.createWriteStream(out, { mode })
 
       await pipelinePromise(driveStream, fsStream)
 
-      return this.absoluteFiles ? pathToFileURL(out).href : '/../assets' + key
+      return this.absoluteFiles ? pathToFileURL(out).href : this._toRelative(out)
     } catch {
       return null
     }
@@ -146,7 +151,7 @@ module.exports = class DriveBundle {
 
     await writeAtomic(dir, out, buf, this.lock)
 
-    return this.absoluteFiles ? pathToFileURL(out).href : '/../prebuilds/' + this.host + '/' + name
+    return this.absoluteFiles ? pathToFileURL(out).href : this._toRelative(out)
   }
 
   async _mapAsset (referrer, input, output) {
@@ -159,6 +164,10 @@ module.exports = class DriveBundle {
   async _mapPrebuild (input, output) {
     const prebuild = await this.extractPrebuild(output)
     return { input, output: prebuild }
+  }
+
+  _toRelative (out) {
+    return '/..' + unixResolve('/', path.relative(this.cwd, out))
   }
 }
 
@@ -197,4 +206,8 @@ async function writeToTmpAndSwap (dir, out, buf) {
       await fs.promises.unlink(tmp)
     } catch {}
   }
+}
+
+function hasToPath (drive) {
+  return typeof drive.toPath === 'function'
 }
