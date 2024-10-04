@@ -17,6 +17,7 @@ module.exports = class DriveBundle {
     prebuilds = true,
     assets = true,
     absoluteFiles = !!mount,
+    inlineAssets = false,
     packages = true,
     entrypoint = '.'
   } = {}) {
@@ -28,6 +29,7 @@ module.exports = class DriveBundle {
     this.cache = cache
     this.mount = typeof mount === 'string' ? mount : mount.href.replace(/[/]$/, '')
     this.absoluteFiles = absoluteFiles
+    this.inlineAssets = inlineAssets
     this.host = host
     this.entrypoint = entrypoint
     this.lock = mutex()
@@ -141,6 +143,7 @@ module.exports = class DriveBundle {
     const resolutions = {}
     const imports = {}
     const sources = {}
+    const assets = {}
     const stream = new Deps(this.drive, { host: this.host, packages: this.packages, source: true, entrypoint })
 
     const addonsPending = []
@@ -195,13 +198,16 @@ module.exports = class DriveBundle {
       const def = r[asset.input]
       r[asset.input] = { asset: asset.output }
       if (def) r[asset.input].default = def
+
+      if (asset.inline) assets[asset.input] = asset.inline
     }
 
     return {
       entrypoint: main,
       resolutions,
       imports,
-      sources
+      sources,
+      assets
     }
   }
 
@@ -210,26 +216,42 @@ module.exports = class DriveBundle {
     return this.mount ? this.mount + encodeURI(key) + trail : key + trail
   }
 
-  async extractAsset (key) {
-    if (hasToPath(this.drive)) {
-      return pathToFileURL(this.drive.toPath(key)).href
+  async _extractAssetToDisk (entry) {
+    const out = path.join(this.assets, entry.key)
+
+    await fs.promises.mkdir(path.dirname(out), { recursive: true })
+    const mode = entry.value.executable ? 0o744 : 0o644
+
+    const driveStream = this.drive.createReadStream(entry)
+    const fsStream = fs.createWriteStream(out, { mode })
+
+    await pipelinePromise(driveStream, fsStream)
+
+    const key = this.absoluteFiles ? pathToFileURL(out).href : this._toRelative(out)
+    return { key, inline: null }
+  }
+
+  async _extractAndInlineAsset (entry) {
+    const value = await this.drive.get(entry)
+
+    return {
+      key: entry.key,
+      inline: {
+        executable: entry.value.executable,
+        value
+      }
     }
+  }
 
-    const out = path.join(this.assets, key)
-
+  async extractAsset (key) {
     try {
       const entry = await this.drive.entry(key)
+
       if (entry === null) return null
+      if (this.inlineAssets) return await this._extractAndInlineAsset(entry)
+      if (hasToPath(this.drive)) return { key: pathToFileURL(this.drive.toPath(key)).href, inline: null }
 
-      await fs.promises.mkdir(path.dirname(out), { recursive: true })
-      const mode = entry.value.executable ? 0o744 : 0o644
-
-      const driveStream = this.drive.createReadStream(entry)
-      const fsStream = fs.createWriteStream(out, { mode })
-
-      await pipelinePromise(driveStream, fsStream)
-
-      return this.absoluteFiles ? pathToFileURL(out).href : this._toRelative(out)
+      return await this._extractAssetToDisk(entry)
     } catch {
       return null
     }
@@ -255,7 +277,7 @@ module.exports = class DriveBundle {
     const dir = unixResolve(referrer, '..')
     const key = unixResolve(dir, input)
     const asset = await this.extractAsset(key)
-    return { referrer, input, output: asset }
+    return { referrer, input, output: asset.key, inline: asset.inline }
   }
 
   async _mapPrebuild (input, output) {
