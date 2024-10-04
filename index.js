@@ -199,7 +199,7 @@ module.exports = class DriveBundle {
       r[asset.input] = { asset: asset.output }
       if (def) r[asset.input].default = def
 
-      if (asset.inline) assets[asset.input] = asset.inline
+      if (asset.inline) assets[asset.output] = asset.inline
     }
 
     return {
