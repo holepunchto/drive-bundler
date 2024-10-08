@@ -142,7 +142,6 @@ module.exports = class DriveBundle {
 
     buffers.push(b4a.from('sources\n'))
     for (const [key, data] of Object.entries(bundle.sources)) {
-      console.log(key, data)
       buffers.push(b4a.from(key + '\n'))
       buffers.push(b4a.from(data))
     }
@@ -150,7 +149,7 @@ module.exports = class DriveBundle {
     buffers.push(b4a.from('assets\n'))
     for (const [key, data] of Object.entries(bundle.assets)) {
       buffers.push(b4a.from(key + '\n'))
-      buffers.push(data)
+      buffers.push(data.value)
     }
 
     const out = b4a.allocUnsafe(32)
