@@ -137,6 +137,26 @@ module.exports = class DriveBundle {
     return await d.bundle()
   }
 
+  static id (bundle) {
+    const buffers = []
+
+    buffers.push(b4a.from('sources\n'))
+    for (const [key, data] of Object.keys(bundle.sources)) {
+      buffers.push(b4a.from(key + '\n'))
+      buffers.push(b4a.from(data))
+    }
+
+    buffers.push(b4a.from('assets\n'))
+    for (const [key, data] of Object.keys(bundle.assets)) {
+      buffers.push(b4a.from(key + '\n'))
+      buffers.push(data)
+    }
+
+    const out = b4a.allocUnsafe(32)
+    sodium.crypto_generichash_batch(out, buffers)
+    return out
+  }
+
   async bundle (entrypoint = this.entrypoint) {
     let main = null
 
