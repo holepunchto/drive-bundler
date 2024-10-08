@@ -1,6 +1,6 @@
 {
   "name": "drive-bundler",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "Extract bundles from drives",
   "main": "index.js",
   "files": [
