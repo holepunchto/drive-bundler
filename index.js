@@ -196,8 +196,8 @@ module.exports = class DriveBundle {
       }
 
       if (this.assets) {
-        for (const { input, output } of data.assets) {
-          assetsPending.push(this._mapAsset(data.key, input, output))
+        for (const { input } of data.assets) {
+          assetsPending.push(this._mapAsset(data.key, input))
         }
       }
     }
@@ -213,13 +213,14 @@ module.exports = class DriveBundle {
     for (const asset of await Promise.all(assetsPending)) {
       if (!asset) continue
 
-      const r = resolutions[asset.referrer] = resolutions[asset.referrer] || {}
+      const referrer = this._resolutionKey(asset.referrer, false)
+      const r = resolutions[referrer] = resolutions[referrer] || {}
 
       const def = r[asset.input]
-      r[asset.input] = { asset: asset.output }
+      r[asset.input] = { asset: asset.output.key }
       if (def) r[asset.input].default = def
 
-      if (asset.inline) assets[asset.output] = asset.inline
+      assets[asset.output.key] = { executable: asset.output.executable, value: asset.output.value }
     }
 
     return {
@@ -248,7 +249,7 @@ module.exports = class DriveBundle {
     await pipelinePromise(driveStream, fsStream)
 
     const key = this.absoluteFiles ? pathToFileURL(out).href : this._toRelative(out)
-    return { key, inline: null }
+    return { key, executable: entry.value.executable, value: null }
   }
 
   async _extractAndInlineAsset (entry) {
@@ -256,10 +257,8 @@ module.exports = class DriveBundle {
 
     return {
       key: entry.key,
-      inline: {
-        executable: entry.value.executable,
-        value
-      }
+      executable: entry.value.executable,
+      value
     }
   }
 
@@ -269,7 +268,7 @@ module.exports = class DriveBundle {
 
       if (entry === null) return null
       if (this.inlineAssets) return await this._extractAndInlineAsset(entry)
-      if (hasToPath(this.drive)) return { key: pathToFileURL(this.drive.toPath(key)).href, inline: null }
+      if (hasToPath(this.drive)) return { key: pathToFileURL(this.drive.toPath(key)).href, executable: false, value: null }
 
       return await this._extractAssetToDisk(entry)
     } catch {
@@ -293,11 +292,11 @@ module.exports = class DriveBundle {
     return this.absoluteFiles ? pathToFileURL(out).href : this._toRelative(out)
   }
 
-  async _mapAsset (referrer, input, output) {
+  async _mapAsset (referrer, input) {
     const dir = unixResolve(referrer, '..')
     const key = unixResolve(dir, input)
-    const asset = await this.extractAsset(key)
-    return { referrer, input, output: asset.key, inline: asset.inline }
+    const output = await this.extractAsset(key)
+    return { referrer, input, output }
   }
 
   async _mapPrebuild (input, output) {
