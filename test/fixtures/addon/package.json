@@ -1,0 +1,13 @@
+{
+  "name": "addon",
+  "version": "1.0.0",
+  "addon": true,
+  "dependencies": {
+    "node-gyp-build": "^4.8.2",
+    "require-addon": "^1.0.2"
+  },
+  "devDependencies": {
+    "cmake-bare": "^1.1.15",
+    "cmake-napi": "^1.0.6"
+  }
+}

@@ -6,6 +6,9 @@
   "files": [
     "index.js"
   ],
+  "workspaces": [
+    "test/fixtures/*"
+  ],
   "imports": {
     "fs": {
       "bare": "bare-fs",
@@ -21,7 +24,7 @@
     }
   },
   "scripts": {
-    "test": "standard && brittle test/*.js"
+    "test": "standard && brittle test.js"
   },
   "dependencies": {
     "b4a": "^1.6.6",
@@ -35,7 +38,7 @@
     "bare-bundle": "^1.0.0",
     "brittle": "^3.3.2",
     "localdrive": "^1.11.3",
-    "node-bare-bundle": "^1.2.1",
+    "node-bare-bundle": "^1.4.2",
     "standard": "^17.1.0"
   },
   "optionalDependencies": {
