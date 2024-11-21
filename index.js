@@ -191,7 +191,7 @@ module.exports = class DriveBundle {
       if (this.prebuilds) {
         for (const { input, output } of data.addons) {
           if (!input || !output) continue
-          addonsPending.push(this._mapPrebuild(input, output))
+          addonsPending.push(this._mapPrebuild(data.key, input, output))
         }
       }
 
@@ -206,8 +206,15 @@ module.exports = class DriveBundle {
       if (!addon) continue
 
       const dir = this._resolutionKey(addon.input, true)
-      const r = resolutions[dir] = resolutions[dir] || {}
+      let r = resolutions[dir] = resolutions[dir] || {}
       r['bare:addon'] = addon.output
+
+      const referrer = this._resolutionKey(addon.referrer, false)
+      r = resolutions[referrer] = resolutions[referrer] || {}
+
+      const def = r[addon.input]
+      r[addon.input] = { addon: addon.output }
+      if (def) r[addon.input].default = def
     }
 
     for (const asset of await Promise.all(assetsPending)) {
@@ -299,9 +306,9 @@ module.exports = class DriveBundle {
     return { referrer, input, output }
   }
 
-  async _mapPrebuild (input, output) {
+  async _mapPrebuild (referrer, input, output) {
     const prebuild = await this.extractPrebuild(output)
-    return { input, output: prebuild }
+    return { referrer, input, output: prebuild }
   }
 
   _toRelative (out) {
