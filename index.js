@@ -205,7 +205,7 @@ module.exports = class DriveBundle {
     for (const addon of await Promise.all(addonsPending)) {
       if (!addon) continue
 
-      const dir = this._resolutionKey(addon.input, true)
+      const dir = this._resolutionKey(path.isAbsolute(addon.input) ? addon.input : path.join(path.dirname(addon.referrer), addon.input), true)
       let r = resolutions[dir] = resolutions[dir] || {}
       r['bare:addon'] = addon.output
 
