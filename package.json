@@ -42,7 +42,7 @@
     "standard": "^17.1.0"
   },
   "optionalDependencies": {
-    "bare-fs": "^3.0.2",
+    "bare-fs": "^4.0.1",
     "bare-path": "^3.0.0"
   },
   "repository": {
