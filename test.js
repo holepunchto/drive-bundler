@@ -27,6 +27,26 @@ test('addon, require.addon()', async function (t) {
   t.is(result, 42)
 })
 
+test('addon, require.addon() with referrer', async function (t) {
+  const drive = new Localdrive(__dirname)
+  const b = new Bundler(drive, { cwd: __dirname, prebuilds, entrypoint: '/test/fixtures/addon/require-addon-referrer.js' })
+
+  const d = await b.bundle()
+
+  const bundle = new Bundle()
+
+  for (const [key, source] of Object.entries(d.sources)) {
+    bundle.write(key, source)
+  }
+
+  bundle.resolutions = d.resolutions
+  bundle.main = d.entrypoint
+
+  const result = nodeBundle(bundle.toBuffer(), { mount: path.join(__dirname, 'test.bundle') })
+
+  t.is(result, 42)
+})
+
 test('addon, require(\'require-addon\')', async function (t) {
   const drive = new Localdrive(__dirname)
   const b = new Bundler(drive, { cwd: __dirname, prebuilds, entrypoint: '/test/fixtures/addon/require-addon-polyfill.js' })
@@ -130,6 +150,26 @@ test('addon mounted, require(\'node-gyp-build\')', async function (t) {
 test('asset, require.asset()', async function (t) {
   const drive = new Localdrive(__dirname)
   const b = new Bundler(drive, { cwd: __dirname, entrypoint: '/test/fixtures/asset/require-asset.js' })
+
+  const d = await b.bundle()
+
+  const bundle = new Bundle()
+
+  for (const [key, source] of Object.entries(d.sources)) {
+    bundle.write(key, source)
+  }
+
+  bundle.resolutions = d.resolutions
+  bundle.main = d.entrypoint
+
+  const asset = nodeBundle(bundle.toBuffer(), { mount: path.join(__dirname, 'test.bundle') })
+
+  t.is(asset, path.join(__dirname, 'test/fixtures/asset/asset.txt'))
+})
+
+test('asset, require.asset() with referrer', async function (t) {
+  const drive = new Localdrive(__dirname)
+  const b = new Bundler(drive, { cwd: __dirname, entrypoint: '/test/fixtures/asset/require-asset-referrer.js' })
 
   const d = await b.bundle()
 
