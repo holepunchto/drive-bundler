@@ -8,7 +8,7 @@ npm install drive-bundler
 
 ## Usage
 
-``` js
+```js
 const DriveBundler = require('drive-bundler')
 
 const b = new DriveBundler(drive)
