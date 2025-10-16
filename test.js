@@ -67,26 +67,6 @@ test('addon, require(\'require-addon\')', async function (t) {
   t.is(result, 42)
 })
 
-test('addon, require(\'node-gyp-build\')', async function (t) {
-  const drive = new Localdrive(__dirname)
-  const b = new Bundler(drive, { cwd: __dirname, prebuilds, entrypoint: '/test/fixtures/addon/node-gyp-build.js' })
-
-  const d = await b.bundle()
-
-  const bundle = new Bundle()
-
-  for (const [key, source] of Object.entries(d.sources)) {
-    bundle.write(key, source)
-  }
-
-  bundle.resolutions = d.resolutions
-  bundle.main = d.entrypoint
-
-  const result = nodeBundle(bundle.toBuffer(), { mount: path.join(__dirname, 'test.bundle') })
-
-  t.is(result, 42)
-})
-
 test('addon mounted, require.addon()', async function (t) {
   const drive = new Localdrive(__dirname)
   const b = new Bundler(drive, { cwd: __dirname, prebuilds, entrypoint: '/test/fixtures/addon/require-addon.js', mount: 'pear://dev' })
@@ -108,26 +88,6 @@ test('addon mounted, require.addon()', async function (t) {
 })
 
 test('addon mounted, require(\'require-addon\')', async function (t) {
-  const drive = new Localdrive(__dirname)
-  const b = new Bundler(drive, { cwd: __dirname, prebuilds, entrypoint: '/test/fixtures/addon/require-addon-polyfill.js', mount: 'pear://foo' })
-
-  const d = await b.bundle()
-
-  const bundle = new Bundle()
-
-  for (const [key, source] of Object.entries(d.sources)) {
-    bundle.write(key, source)
-  }
-
-  bundle.resolutions = d.resolutions
-  bundle.main = d.entrypoint
-
-  const result = nodeBundle(bundle.toBuffer(), { mount: path.join(__dirname, 'test.bundle') })
-
-  t.is(result, 42)
-})
-
-test('addon mounted, require(\'node-gyp-build\')', async function (t) {
   const drive = new Localdrive(__dirname)
   const b = new Bundler(drive, { cwd: __dirname, prebuilds, entrypoint: '/test/fixtures/addon/require-addon-polyfill.js', mount: 'pear://foo' })
 
