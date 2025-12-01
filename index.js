@@ -309,12 +309,13 @@ module.exports = class DriveBundle {
 
       if (entry === null) return null
       if (this.inlineAssets) return await this._extractAndInlineAsset(entry)
-      if (hasToPath(this.drive))
+      if (hasToPath(this.drive)) {
         return {
           key: pathToFileURL(this.drive.toPath(key)).href,
           executable: false,
           value: null
         }
+      }
 
       return await this._extractAssetToDisk(entry)
     } catch {
