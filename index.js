@@ -15,9 +15,7 @@ module.exports = class DriveBundle {
       cwd = path.resolve('.'),
       mount = '',
       cache = null,
-      host = require.addon
-        ? require.addon.host
-        : process.platform + '-' + process.arch,
+      host = require.addon ? require.addon.host : process.platform + '-' + process.arch,
       prebuilds = true,
       assets = true,
       absoluteFiles = !!mount,
@@ -30,17 +28,11 @@ module.exports = class DriveBundle {
     this.packages = packages
     this.cwd = cwd
     this.prebuilds = prebuilds
-      ? path.resolve(
-          cwd,
-          typeof prebuilds === 'string' ? prebuilds : 'prebuilds'
-        )
+      ? path.resolve(cwd, typeof prebuilds === 'string' ? prebuilds : 'prebuilds')
       : null
-    this.assets = assets
-      ? path.resolve(cwd, typeof assets === 'string' ? assets : 'assets')
-      : null
+    this.assets = assets ? path.resolve(cwd, typeof assets === 'string' ? assets : 'assets') : null
     this.cache = cache
-    this.mount =
-      typeof mount === 'string' ? mount : mount.href.replace(/[/]$/, '')
+    this.mount = typeof mount === 'string' ? mount : mount.href.replace(/[/]$/, '')
     this.absoluteFiles = absoluteFiles
     this.inlineAssets = inlineAssets
     this.host = host
@@ -61,10 +53,7 @@ module.exports = class DriveBundle {
     for (const [key, source] of Object.entries(b.sources)) {
       if (wrap) wrap += ',\n'
       wrap +=
-        JSON.stringify(key) +
-        ': { resolutions: ' +
-        JSON.stringify(b.resolutions[key] || {}) +
-        ', '
+        JSON.stringify(key) + ': { resolutions: ' + JSON.stringify(b.resolutions[key] || {}) + ', '
       wrap += 'source (module, exports, __filename, __dirname, require) {'
       wrap += (key.endsWith('.json') ? 'module.exports = ' : '') + source
       wrap += '\n}}'
@@ -256,10 +245,7 @@ module.exports = class DriveBundle {
       r[asset.input] = { asset: asset.output.key }
       if (def) r[asset.input].default = def
 
-      assets[asset.output.key] = {
-        executable: asset.output.executable,
-        value: asset.output.value
-      }
+      assets[asset.output.key] = { executable: asset.output.executable, value: asset.output.value }
     }
 
     return {
@@ -287,9 +273,7 @@ module.exports = class DriveBundle {
 
     await pipelinePromise(driveStream, fsStream)
 
-    const key = this.absoluteFiles
-      ? pathToFileURL(out).href
-      : this._toRelative(out)
+    const key = this.absoluteFiles ? pathToFileURL(out).href : this._toRelative(out)
     return { key, executable: entry.value.executable, value: null }
   }
 
@@ -310,11 +294,7 @@ module.exports = class DriveBundle {
       if (entry === null) return null
       if (this.inlineAssets) return await this._extractAndInlineAsset(entry)
       if (hasToPath(this.drive)) {
-        return {
-          key: pathToFileURL(this.drive.toPath(key)).href,
-          executable: false,
-          value: null
-        }
+        return { key: pathToFileURL(this.drive.toPath(key)).href, executable: false, value: null }
       }
 
       return await this._extractAssetToDisk(entry)
