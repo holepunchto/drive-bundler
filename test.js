@@ -9,7 +9,11 @@ const prebuilds = path.join(__dirname, 'test/prebuilds')
 
 test('addon, require.addon()', async function (t) {
   const drive = new Localdrive(__dirname)
-  const b = new Bundler(drive, { cwd: __dirname, prebuilds, entrypoint: '/test/fixtures/addon/require-addon.js' })
+  const b = new Bundler(drive, {
+    cwd: __dirname,
+    prebuilds,
+    entrypoint: '/test/fixtures/addon/require-addon.js'
+  })
 
   const d = await b.bundle()
 
@@ -29,7 +33,11 @@ test('addon, require.addon()', async function (t) {
 
 test('addon, require.addon() with referrer', async function (t) {
   const drive = new Localdrive(__dirname)
-  const b = new Bundler(drive, { cwd: __dirname, prebuilds, entrypoint: '/test/fixtures/addon/require-addon-referrer.js' })
+  const b = new Bundler(drive, {
+    cwd: __dirname,
+    prebuilds,
+    entrypoint: '/test/fixtures/addon/require-addon-referrer.js'
+  })
 
   const d = await b.bundle()
 
@@ -47,9 +55,13 @@ test('addon, require.addon() with referrer', async function (t) {
   t.is(result, 42)
 })
 
-test('addon, require(\'require-addon\')', async function (t) {
+test("addon, require('require-addon')", async function (t) {
   const drive = new Localdrive(__dirname)
-  const b = new Bundler(drive, { cwd: __dirname, prebuilds, entrypoint: '/test/fixtures/addon/require-addon-polyfill.js' })
+  const b = new Bundler(drive, {
+    cwd: __dirname,
+    prebuilds,
+    entrypoint: '/test/fixtures/addon/require-addon-polyfill.js'
+  })
 
   const d = await b.bundle()
 
@@ -69,7 +81,12 @@ test('addon, require(\'require-addon\')', async function (t) {
 
 test('addon mounted, require.addon()', async function (t) {
   const drive = new Localdrive(__dirname)
-  const b = new Bundler(drive, { cwd: __dirname, prebuilds, entrypoint: '/test/fixtures/addon/require-addon.js', mount: 'pear://dev' })
+  const b = new Bundler(drive, {
+    cwd: __dirname,
+    prebuilds,
+    entrypoint: '/test/fixtures/addon/require-addon.js',
+    mount: 'pear://dev'
+  })
 
   const d = await b.bundle()
 
@@ -87,9 +104,14 @@ test('addon mounted, require.addon()', async function (t) {
   t.is(result, 42)
 })
 
-test('addon mounted, require(\'require-addon\')', async function (t) {
+test("addon mounted, require('require-addon')", async function (t) {
   const drive = new Localdrive(__dirname)
-  const b = new Bundler(drive, { cwd: __dirname, prebuilds, entrypoint: '/test/fixtures/addon/require-addon-polyfill.js', mount: 'pear://foo' })
+  const b = new Bundler(drive, {
+    cwd: __dirname,
+    prebuilds,
+    entrypoint: '/test/fixtures/addon/require-addon-polyfill.js',
+    mount: 'pear://foo'
+  })
 
   const d = await b.bundle()
 
@@ -109,7 +131,10 @@ test('addon mounted, require(\'require-addon\')', async function (t) {
 
 test('asset, require.asset()', async function (t) {
   const drive = new Localdrive(__dirname)
-  const b = new Bundler(drive, { cwd: __dirname, entrypoint: '/test/fixtures/asset/require-asset.js' })
+  const b = new Bundler(drive, {
+    cwd: __dirname,
+    entrypoint: '/test/fixtures/asset/require-asset.js'
+  })
 
   const d = await b.bundle()
 
@@ -129,7 +154,10 @@ test('asset, require.asset()', async function (t) {
 
 test('asset, require.asset() with referrer', async function (t) {
   const drive = new Localdrive(__dirname)
-  const b = new Bundler(drive, { cwd: __dirname, entrypoint: '/test/fixtures/asset/require-asset-referrer.js' })
+  const b = new Bundler(drive, {
+    cwd: __dirname,
+    entrypoint: '/test/fixtures/asset/require-asset-referrer.js'
+  })
 
   const d = await b.bundle()
 
@@ -147,9 +175,12 @@ test('asset, require.asset() with referrer', async function (t) {
   t.is(asset, path.join(__dirname, 'test/fixtures/asset/asset.txt'))
 })
 
-test('asset, require(\'require-asset\')', { skip: true }, async function (t) {
+test("asset, require('require-asset')", { skip: true }, async function (t) {
   const drive = new Localdrive(__dirname)
-  const b = new Bundler(drive, { cwd: __dirname, entrypoint: '/test/fixtures/asset/require-asset-polyfill.js' })
+  const b = new Bundler(drive, {
+    cwd: __dirname,
+    entrypoint: '/test/fixtures/asset/require-asset-polyfill.js'
+  })
 
   const d = await b.bundle()
 
@@ -169,7 +200,11 @@ test('asset, require(\'require-asset\')', { skip: true }, async function (t) {
 
 test('asset mounted, require.asset()', async function (t) {
   const drive = new Localdrive(__dirname)
-  const b = new Bundler(drive, { cwd: __dirname, entrypoint: '/test/fixtures/asset/require-asset.js', mount: 'pear://dev' })
+  const b = new Bundler(drive, {
+    cwd: __dirname,
+    entrypoint: '/test/fixtures/asset/require-asset.js',
+    mount: 'pear://dev'
+  })
 
   const d = await b.bundle()
 
@@ -187,9 +222,13 @@ test('asset mounted, require.asset()', async function (t) {
   t.is(asset, path.join(__dirname, 'test/fixtures/asset/asset.txt'))
 })
 
-test('asset mounted, require(\'require-asset\')', { skip: true }, async function (t) {
+test("asset mounted, require('require-asset')", { skip: true }, async function (t) {
   const drive = new Localdrive(__dirname)
-  const b = new Bundler(drive, { cwd: __dirname, entrypoint: '/test/fixtures/asset/require-asset-polyfill.js', mount: 'pear://dev' })
+  const b = new Bundler(drive, {
+    cwd: __dirname,
+    entrypoint: '/test/fixtures/asset/require-asset-polyfill.js',
+    mount: 'pear://dev'
+  })
 
   const d = await b.bundle()
 

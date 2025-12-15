@@ -9,22 +9,27 @@ const { pipelinePromise } = require('streamx')
 const { pathToFileURL } = require('url-file-url')
 
 module.exports = class DriveBundle {
-  constructor (drive, {
-    cwd = path.resolve('.'),
-    mount = '',
-    cache = null,
-    host = require.addon ? require.addon.host : process.platform + '-' + process.arch,
-    prebuilds = true,
-    assets = true,
-    absoluteFiles = !!mount,
-    inlineAssets = false,
-    packages = true,
-    entrypoint = '.'
-  } = {}) {
+  constructor(
+    drive,
+    {
+      cwd = path.resolve('.'),
+      mount = '',
+      cache = null,
+      host = require.addon ? require.addon.host : process.platform + '-' + process.arch,
+      prebuilds = true,
+      assets = true,
+      absoluteFiles = !!mount,
+      inlineAssets = false,
+      packages = true,
+      entrypoint = '.'
+    } = {}
+  ) {
     this.drive = drive
     this.packages = packages
     this.cwd = cwd
-    this.prebuilds = prebuilds ? path.resolve(cwd, typeof prebuilds === 'string' ? prebuilds : 'prebuilds') : null
+    this.prebuilds = prebuilds
+      ? path.resolve(cwd, typeof prebuilds === 'string' ? prebuilds : 'prebuilds')
+      : null
     this.assets = assets ? path.resolve(cwd, typeof assets === 'string' ? assets : 'assets') : null
     this.cache = cache
     this.mount = typeof mount === 'string' ? mount : mount.href.replace(/[/]$/, '')
@@ -35,19 +40,20 @@ module.exports = class DriveBundle {
     this.lock = mutex()
   }
 
-  static async stringify (drive, opts) {
+  static async stringify(drive, opts) {
     const d = new this(drive, opts)
     return await d.stringify()
   }
 
-  async stringify (entrypoint = this.entrypoint) {
+  async stringify(entrypoint = this.entrypoint) {
     const b = await this.bundle(entrypoint)
     const addons = {}
     let wrap = ''
 
     for (const [key, source] of Object.entries(b.sources)) {
       if (wrap) wrap += ',\n'
-      wrap += JSON.stringify(key) + ': { resolutions: ' + JSON.stringify(b.resolutions[key] || {}) + ', '
+      wrap +=
+        JSON.stringify(key) + ': { resolutions: ' + JSON.stringify(b.resolutions[key] || {}) + ', '
       wrap += 'source (module, exports, __filename, __dirname, require) {'
       wrap += (key.endsWith('.json') ? 'module.exports = ' : '') + source
       wrap += '\n}}'
@@ -57,7 +63,8 @@ module.exports = class DriveBundle {
       if (map['bare:addon']) addons[key] = map['bare:addon']
     }
 
-    return `{
+    return (
+      `{
       const __bundle__ = {
         builtinRequire: typeof require === 'function' ? require : null,
         cache: Object.create(null),
@@ -129,15 +136,18 @@ module.exports = class DriveBundle {
       }
 
       __bundle__.require(${JSON.stringify(b.entrypoint)})
-    }`.replace(/\n[ ]{4}/g, '\n').trim() + '\n'
+    }`
+        .replace(/\n[ ]{4}/g, '\n')
+        .trim() + '\n'
+    )
   }
 
-  static async bundle (drive, opts) {
+  static async bundle(drive, opts) {
     const d = new this(drive, opts)
     return await d.bundle()
   }
 
-  static id (bundle) {
+  static id(bundle) {
     const buffers = []
 
     buffers.push(b4a.from('sources\n'))
@@ -157,14 +167,19 @@ module.exports = class DriveBundle {
     return out
   }
 
-  async bundle (entrypoint = this.entrypoint) {
+  async bundle(entrypoint = this.entrypoint) {
     let main = null
 
     const resolutions = {}
     const imports = {}
     const sources = {}
     const assets = {}
-    const stream = new Deps(this.drive, { host: this.host, packages: this.packages, source: true, entrypoint })
+    const stream = new Deps(this.drive, {
+      host: this.host,
+      packages: this.packages,
+      source: true,
+      entrypoint
+    })
 
     const addonsPending = []
     const assetsPending = []
@@ -205,8 +220,11 @@ module.exports = class DriveBundle {
     for (const addon of await Promise.all(addonsPending)) {
       if (!addon) continue
 
-      const dir = this._resolutionKey(unixResolve(unixResolve(addon.referrer, '..'), addon.input), true)
-      let r = resolutions[dir] = resolutions[dir] || {}
+      const dir = this._resolutionKey(
+        unixResolve(unixResolve(addon.referrer, '..'), addon.input),
+        true
+      )
+      let r = (resolutions[dir] = resolutions[dir] || {})
       r['bare:addon'] = addon.output
 
       const referrer = this._resolutionKey(addon.referrer, false)
@@ -221,7 +239,7 @@ module.exports = class DriveBundle {
       if (!asset) continue
 
       const referrer = this._resolutionKey(asset.referrer, false)
-      const r = resolutions[referrer] = resolutions[referrer] || {}
+      const r = (resolutions[referrer] = resolutions[referrer] || {})
 
       const def = r[asset.input]
       r[asset.input] = { asset: asset.output.key }
@@ -239,12 +257,12 @@ module.exports = class DriveBundle {
     }
   }
 
-  _resolutionKey (key, dir) {
+  _resolutionKey(key, dir) {
     const trail = dir && !key.endsWith('/') ? '/' : ''
     return this.mount ? this.mount + encodeURI(key) + trail : key + trail
   }
 
-  async _extractAssetToDisk (entry) {
+  async _extractAssetToDisk(entry) {
     const out = path.join(this.assets, entry.key)
 
     await fs.promises.mkdir(path.dirname(out), { recursive: true })
@@ -259,7 +277,7 @@ module.exports = class DriveBundle {
     return { key, executable: entry.value.executable, value: null }
   }
 
-  async _extractAndInlineAsset (entry) {
+  async _extractAndInlineAsset(entry) {
     const value = await this.drive.get(entry)
 
     return {
@@ -269,13 +287,15 @@ module.exports = class DriveBundle {
     }
   }
 
-  async extractAsset (key) {
+  async extractAsset(key) {
     try {
       const entry = await this.drive.entry(key)
 
       if (entry === null) return null
       if (this.inlineAssets) return await this._extractAndInlineAsset(entry)
-      if (hasToPath(this.drive)) return { key: pathToFileURL(this.drive.toPath(key)).href, executable: false, value: null }
+      if (hasToPath(this.drive)) {
+        return { key: pathToFileURL(this.drive.toPath(key)).href, executable: false, value: null }
+      }
 
       return await this._extractAssetToDisk(entry)
     } catch {
@@ -283,7 +303,7 @@ module.exports = class DriveBundle {
     }
   }
 
-  async extractPrebuild (key) {
+  async extractPrebuild(key) {
     const m = key.match(/\/([^/@]+)(@[^/]+)?(\.node|\.bare)$/)
     if (!m) return null
 
@@ -299,30 +319,30 @@ module.exports = class DriveBundle {
     return this.absoluteFiles ? pathToFileURL(out).href : this._toRelative(out)
   }
 
-  async _mapAsset (referrer, input) {
+  async _mapAsset(referrer, input) {
     const dir = unixResolve(referrer, '..')
     const key = unixResolve(dir, input)
     const output = await this.extractAsset(key)
     return { referrer, input, output }
   }
 
-  async _mapPrebuild (referrer, input, output) {
+  async _mapPrebuild(referrer, input, output) {
     const prebuild = await this.extractPrebuild(output)
     return { referrer, input, output: prebuild }
   }
 
-  _toRelative (out) {
+  _toRelative(out) {
     return '/..' + unixResolve('/', path.relative(this.cwd, out))
   }
 }
 
-function hash (buf) {
+function hash(buf) {
   const out = b4a.allocUnsafe(32)
   sodium.crypto_generichash(out, buf)
   return b4a.toString(out, 'hex')
 }
 
-async function writeAtomic (dir, out, buf, lock) {
+async function writeAtomic(dir, out, buf, lock) {
   try {
     await fs.promises.stat(out)
     return
@@ -337,7 +357,7 @@ async function writeAtomic (dir, out, buf, lock) {
   }
 }
 
-async function writeToTmpAndSwap (dir, out, buf) {
+async function writeToTmpAndSwap(dir, out, buf) {
   const tmp = out + '.tmp'
 
   await fs.promises.mkdir(dir, { recursive: true })
@@ -353,6 +373,6 @@ async function writeToTmpAndSwap (dir, out, buf) {
   }
 }
 
-function hasToPath (drive) {
+function hasToPath(drive) {
   return typeof drive.toPath === 'function'
 }
