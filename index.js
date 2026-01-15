@@ -236,7 +236,7 @@ module.exports = class DriveBundle {
     }
 
     for (const asset of await Promise.all(assetsPending)) {
-      if (!asset) continue
+      if (!asset?.output) continue
 
       const referrer = this._resolutionKey(asset.referrer, false)
       const r = (resolutions[referrer] = resolutions[referrer] || {})
