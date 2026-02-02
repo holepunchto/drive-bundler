@@ -16,6 +16,7 @@ module.exports = class DriveBundle {
       mount = '',
       cache = null,
       host = require.addon ? require.addon.host : process.platform + '-' + process.arch,
+      runtimes = ['bare', 'node'],
       prebuilds = true,
       assets = true,
       absoluteFiles = !!mount,
@@ -36,6 +37,7 @@ module.exports = class DriveBundle {
     this.absoluteFiles = absoluteFiles
     this.inlineAssets = inlineAssets
     this.host = host
+    this.runtimes = runtimes
     this.entrypoint = entrypoint
     this.lock = mutex()
   }
@@ -176,6 +178,7 @@ module.exports = class DriveBundle {
     const assets = {}
     const stream = new Deps(this.drive, {
       host: this.host,
+      runtimes: this.runtimes,
       packages: this.packages,
       source: true,
       entrypoint
